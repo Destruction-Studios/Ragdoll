@@ -1,0 +1,29 @@
+{
+  "name": "Ragdoll",
+  "tree": {
+    "$className": "DataModel",
+  "ReplicatedStorage" :{
+    "Ragdoll" :{
+      "$className" : "RemoteEvent"
+    }
+  },
+    "ServerScriptService": {
+      "Server": {
+        "$className" : "Folder",
+        "Services" :{
+          "$path" : "src/services"
+        },
+        "StartRagdoll" :{
+          "$path" : "src/ragdollstart"
+        }
+      }
+    },
+    "StarterPlayer" :{
+      "StarterCharacterScripts":{
+        "RagdollClient" :{
+          "$path" : "src/ragdollclient"
+        }
+      }
+    }
+  }
+}
