@@ -3,24 +3,24 @@
   "tree": {
     "$className": "DataModel",
   "ReplicatedStorage" :{
-    "Ragdoll" :{
+    "Ragdoll" : {
       "$className" : "RemoteEvent"
     }
   },
     "ServerScriptService": {
       "Server": {
         "$className" : "Folder",
-        "Services" :{
+        "Services" : {
           "$path" : "src/services"
         },
-        "StartRagdoll" :{
+        "StartRagdoll" : {
           "$path" : "src/ragdollstart"
         }
       }
     },
     "StarterPlayer" :{
       "StarterCharacterScripts":{
-        "RagdollClient" :{
+        "RagdollClient" : {
           "$path" : "src/ragdollclient"
         }
       }
