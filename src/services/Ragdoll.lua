@@ -10,10 +10,11 @@ local RagdollService = {}
 local names = {
     "RagdollAttachment",
     "RagdollSocket",
-    "Collider"
+    "RagdollCollider"
 }
 
 local COLLISION_GROUP_NAME = "RagdollColliders"
+local ATTRIBUTE_NAME = "Ragdolled"
 
 if not PhysicsService:IsCollisionGroupRegistered(COLLISION_GROUP_NAME) then
     PhysicsService:RegisterCollisionGroup(COLLISION_GROUP_NAME)
@@ -21,16 +22,17 @@ end
 
 PhysicsService:CollisionGroupSetCollidable(COLLISION_GROUP_NAME, COLLISION_GROUP_NAME, false)
 
-local function createCollider(part)
+local function createCollider(part, player)
     if part.Name == "HumanoidRootPart" then
         return
     end
     local c = Instance.new("Part")
-    c.Size = part.Size/1.7
+    c.Size = part.Size/1.5
     c.CFrame = part.CFrame
-    c.Transparency = .5
-    c.CollisionGroup = COLLISION_GROUP_NAME
-    c.Massless = true
+    c.Transparency = 1
+    if player then
+        c.CollisionGroup = COLLISION_GROUP_NAME
+    end
     c.Name = names[3]
     local weld = Instance.new("Weld")
     weld.Part0 = c
@@ -40,41 +42,55 @@ local function createCollider(part)
 end
 
 function RagdollService:Ragdoll(model)
-    local player = Players:GetPlayerFromCharacter(model)
-    if player then
+    --V remove later?
+    if typeof(model) == "table" then --checking if the obj passed was a table
+        for _,obj in model do
+            RagdollService:Ragdoll(obj)--if it was we ragdoll each character/rig
+        end
+    end
+    --^ 
+    if typeof(model) ~= "Instance" or (typeof(model) == "Instance" and not model:IsA("Model")) then--make sure its a model
+        return
+    end
+
+    if model:GetAttribute(ATTRIBUTE_NAME) then --an extra check
+        return
+    end
+
+    local player = Players:GetPlayerFromCharacter(model) --gets the player from the rig/character
+    if player then --if its a player then do stuff
         --client fire
         ragdollEvent:FireClient(player, true)
     end
 
-    local folder = model:FindFirstChild("RagdollSockets")
+    local folder = model:FindFirstChild("RagdollSockets") --finds the folder.
 
-    if not folder then
-       folder = Instance.new("Folder")
+    if not folder then --checks if the folder exists for the BallSockets
+       folder = Instance.new("Folder") --if not then we create one
        folder.Name = "RagdollSockets"
        folder.Parent = model
     end
 
-    local humanoidRootPart = model:FindFirstChild("HumanoidRootPart")
-    local humanoid :Humanoid = model:FindFirstChildWhichIsA("Humanoid")
-    if not humanoid or not humanoidRootPart then
+    local humanoidRootPart = model:FindFirstChild("HumanoidRootPart") --gets the HumanoidRootPart
+    local humanoid :Humanoid = model:FindFirstChildWhichIsA("Humanoid") --gets the Humanoid
+    if not humanoid or not humanoidRootPart then --makes sure it has a Humanoid and a HumanoidRootPart
         return
     end
 
+    humanoidRootPart:SetNetworkOwner(nil)
     humanoidRootPart.CanCollide = true
     humanoid.PlatformStand = true
     humanoid.AutoRotate = false
-    humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+    -- ^ sets stuff
 
-    
-
-    for _, joint in model:GetDescendants() do
-        if joint:IsA("Motor6D") then
+    for _, obj in model:GetDescendants() do
+        if obj:IsA("Motor6D") then
             local a1 = Instance.new("Attachment")
             local a2 = Instance.new("Attachment")
             local socket = Instance.new("BallSocketConstraint")
 
-            a1.CFrame = joint.C0
-            a2.CFrame = joint.C1
+            a1.CFrame = obj.C0
+            a2.CFrame = obj.C1
 
             a1.Name = names[1]
             a2.Name = names[1]
@@ -83,63 +99,82 @@ function RagdollService:Ragdoll(model)
             socket.Attachment0 = a1
             socket.Attachment1 = a2
 
-            a1.Parent = joint.Part0
-            a2.Parent = joint.Part1
+            a1.Parent = obj.Part0
+            a2.Parent = obj.Part1
             socket.Parent = folder
 
             socket.TwistLimitsEnabled = true
 			socket.LimitsEnabled = true
             socket.MaxFrictionTorque = 10
-            socket.TwistLowerAngle = -25
-            socket.TwistUpperAngle = 25
-            socket.UpperAngle = 0
+            if player then --checks if its a player bc a player needs differant properties than a rig/NPC
+                socket.TwistLowerAngle = -30
+                socket.TwistUpperAngle = 30
+                socket.UpperAngle = 0
+             else
+                socket.TwistLowerAngle = 0
+                socket.TwistUpperAngle = 0
+                socket.UpperAngle = 45 
+            end
 
-            joint.Enabled = false
-      elseif joint:IsA("BasePart") and not joint.Parent:IsA("Accessory") and joint.Name ~= names[3] then
-            createCollider(joint)
-            joint.CollisionGroup = COLLISION_GROUP_NAME
+            obj.Enabled = false
+      elseif obj:IsA("BasePart") and not obj.Parent:IsA("Accessory") and obj.Name ~= names[3] then
+            createCollider(obj, player) --creates a collider for the Part for a more accurate physics
+            obj.CollisionGroup = COLLISION_GROUP_NAME --sets the collision group for part
         end
     end
 
-    model:SetAttribute("Ragdolled", true)
-
-    --[[
-    task.defer(function()
-        repeat
-            humanoid.PlatformStand = true
-            task.wait(.1)
-        until not model:GetAttribute("Ragdolled") or not model or not humanoid
-    end)
-    ]]
-
-    RagdollService:Force(model, humanoidRootPart.CFrame.LookVector * 3.5)
+    model:SetAttribute(ATTRIBUTE_NAME, true) --sets the Attribute
 end
 
 function RagdollService:UnRagdoll(model)
-    local player = Players:GetPlayerFromCharacter(model)
+    -- V remove? probably not
+    if typeof(model) == "table" then --checking if the obj passed was a table
+        for _,obj in model do
+            RagdollService:UnRagdoll(obj) --unragdolls the rig/character
+        end
+    end
+    -- ^ remove?
+    if typeof(model) ~= "Instance" or (typeof(model) == "Instance" and not model:IsA("Model"))  then --makes sure its a model
+        return
+    end
+    local player = Players:GetPlayerFromCharacter(model) --gets the player
     if player then
         --client fire
         ragdollEvent:FireClient(player, false)
     end
 
-    local humanoid :Humanoid = model:FindFirstChildWhichIsA("Humanoid")
-    if not humanoid then
+    if not model:GetAttribute(ATTRIBUTE_NAME) then --an extra check
         return
     end
 
-    model.HumanoidRootPart.CanCollide = false
-    humanoid.PlatformStand = false
-    humanoid.AutoRotate = true
+    --same stuff as before. 
+
+    local humanoid :Humanoid = model:FindFirstChildWhichIsA("Humanoid")
+    local humanoidRootPart = model:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not humanoidRootPart then
+        return
+    end
 
     for _, obj in model:GetDescendants() do
         if obj:IsA("Motor6D") then
-           obj.Enabled = true
+           obj.Enabled = true --ReEnables the motor6D
          elseif table.find(names, obj.Name) then
-            obj:Destroy()
+            obj:Destroy() --if the object was create for the ragdoll then destroys it
+         elseif obj:IsA("BasePart") then
+            obj.CollisionGroup = "Default" --reseting the collision group
         end
     end
 
-    model:SetAttribute("Ragdolled", false)
+    model:SetAttribute(ATTRIBUTE_NAME, false)
+
+    if player then
+        humanoidRootPart:SetNetworkOwnershipAuto()
+        task.wait(.075) --if it is a player then we wait a bit before we turn PlatformStand off so the character doesnt fling 
+    end
+
+    humanoidRootPart.CanCollide = false
+    humanoid.AutoRotate = true
+    humanoid.PlatformStand = false
 end
 
 local function onRagdollEvent(player:Player, value:boolean)
