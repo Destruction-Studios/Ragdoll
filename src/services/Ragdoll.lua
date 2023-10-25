@@ -13,8 +13,19 @@ local names = {
     "RagdollCollider"
 }
 
+local socketProperties = {
+    ["Neck"] = {-45, 45},
+    ["Right Shoulder"] = {-30, 30},
+    ["Left Shoulder"] = {-30, 30},
+    ["Left Hip"] = {-20, 20},
+    ["Right Hip"] = {-20, 20}
+}
+
 local COLLISION_GROUP_NAME = "RagdollColliders"
 local ATTRIBUTE_NAME = "Ragdolled"
+
+local MIN_ANGLE = -15
+local MAX_ANGLE = 15
 
 if not PhysicsService:IsCollisionGroupRegistered(COLLISION_GROUP_NAME) then
     PhysicsService:RegisterCollisionGroup(COLLISION_GROUP_NAME)
@@ -77,14 +88,13 @@ function RagdollService:Ragdoll(model)
         return
     end
 
-    humanoidRootPart:SetNetworkOwner(nil)
     humanoidRootPart.CanCollide = true
     humanoid.PlatformStand = true
     humanoid.AutoRotate = false
     -- ^ sets stuff
 
     for _, obj in model:GetDescendants() do
-        if obj:IsA("Motor6D") then
+        if obj:IsA("Motor6D") and obj.Name ~= "RootJoint" then
             local a1 = Instance.new("Attachment")
             local a2 = Instance.new("Attachment")
             local socket = Instance.new("BallSocketConstraint")
@@ -106,15 +116,11 @@ function RagdollService:Ragdoll(model)
             socket.TwistLimitsEnabled = true
 			socket.LimitsEnabled = true
             socket.MaxFrictionTorque = 10
-            if player then --checks if its a player bc a player needs differant properties than a rig/NPC
-                socket.TwistLowerAngle = -30
-                socket.TwistUpperAngle = 30
-                socket.UpperAngle = 0
-             else
-                socket.TwistLowerAngle = 0
-                socket.TwistUpperAngle = 0
-                socket.UpperAngle = 45 
-            end
+            print(obj.Name)
+            -- if player then --checks if its a player bc a player needs differant properties than a rig/NPC
+            socket.TwistLowerAngle = socketProperties[obj.Name][1]
+            socket.TwistUpperAngle = socketProperties[obj.Name][2]
+            socket.UpperAngle = 0
 
             obj.Enabled = false
       elseif obj:IsA("BasePart") and not obj.Parent:IsA("Accessory") and obj.Name ~= names[3] then
@@ -168,8 +174,7 @@ function RagdollService:UnRagdoll(model)
     model:SetAttribute(ATTRIBUTE_NAME, false)
 
     if player then
-        humanoidRootPart:SetNetworkOwnershipAuto()
-        task.wait(.075) --if it is a player then we wait a bit before we turn PlatformStand off so the character doesnt fling 
+        -- task.wait(.035) --if it is a player then we wait a bit before we turn PlatformStand off so the character doesnt fling 
     end
 
     humanoidRootPart.CanCollide = false

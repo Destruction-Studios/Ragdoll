@@ -13,9 +13,9 @@ ragdollEvent.OnClientEvent:Connect(function(ragdolled)
     isRagdolled = ragdolled
     if ragdolled and character:FindFirstChild("Head") then
         camera.CameraSubject = character.Head
-        -- humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false) --
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
         task.wait(.5)
-            humanoid.PlatformStand = true
+        humanoid.PlatformStand = true
     else
         camera.CameraSubject = character.Humanoid
        humanoid.PlatformStand = false
